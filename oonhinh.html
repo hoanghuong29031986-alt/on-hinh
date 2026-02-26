@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mật mã hình học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+            overflow-x: hidden;
+            touch-action: none;
+        }
+
+        .shape-3d {
+            filter: drop-shadow(4px 6px 4px rgba(0,0,0,0.2));
+            transition: transform 0.2s;
+            cursor: grab;
+        }
+
+        .shape-3d:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+
+        .drop-zone {
+            border: 4px dashed #94a3b8;
+            background: rgba(255, 255, 255, 0.5);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            transform: scale(1.05);
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .success-flash {
+            animation: success-bg 0.5s ease-out;
+        }
+
+        @keyframes success-bg {
+            0% { background-color: transparent; }
+            50% { background-color: #4ade80; }
+            100% { background-color: transparent; }
+        }
+
+        [draggable="true"] {
+            user-select: none;
+            -webkit-user-drag: element;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 bg-sky-50">
+
+    <!-- Header -->
+    <div class="text-center mt-4">
+        <h1 class="text-3xl md:text-5xl font-bold text-blue-600 drop-shadow-sm mb-2">Mật mã hình học</h1>
+        <p id="instruction" class="text-lg md:text-2xl text-gray-700 font-medium">Bé hãy chọn hình tiếp theo nhé</p>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-container" class="w-full max-w-6xl flex flex-col items-center gap-6 md:gap-10 my-4">
+        
+        <!-- Pattern Row -->
+        <div id="pattern-row" class="flex flex-nowrap justify-center items-center gap-2 md:gap-4 p-4 md:p-8 bg-white/90 rounded-3xl shadow-2xl min-h-[140px] md:min-h-[180px] w-full border-4 border-white overflow-x-auto">
+            <!-- Shapes will be injected here -->
+        </div>
+
+        <!-- Selection Area -->
+        <div class="w-full flex flex-col items-center gap-4">
+            <p class="text-gray-500 font-bold uppercase tracking-widest text-sm">Kho hình của bé</p>
+            <div id="options-row" class="flex flex-wrap justify-center gap-4 md:gap-10 p-4 md:p-8 bg-blue-100/50 rounded-2xl border-2 border-blue-200 shadow-inner">
+                <!-- Options will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer / Controls -->
+    <div class="mb-6 flex flex-col items-center gap-4">
+        <div class="flex gap-3">
+            <div id="step-1" class="w-5 h-5 rounded-full border-2 border-white shadow-sm transition-colors"></div>
+            <div id="step-2" class="w-5 h-5 rounded-full border-2 border-white shadow-sm transition-colors"></div>
+            <div id="step-3" class="w-5 h-5 rounded-full border-2 border-white shadow-sm transition-colors"></div>
+            <div id="step-4" class="w-5 h-5 rounded-full border-2 border-white shadow-sm transition-colors"></div>
+        </div>
+        
+        <button id="speaker-btn" class="p-4 bg-white rounded-full shadow-lg hover:bg-blue-50 transition-all active:scale-90">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="text-blue-500" viewBox="0 0 16 16">
+                <path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/>
+                <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/>
+                <path d="M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182L8 5.525A3.489 3.489 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="win-modal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-[40px] p-10 text-center max-w-sm w-full shadow-2xl scale-0 transition-transform duration-500" id="modal-content">
+            <div class="text-8xl mb-4 animate-bounce">🏆</div>
+            <h2 class="text-4xl font-bold text-blue-600 mb-2">Tuyệt vời!</h2>
+            <p class="text-xl text-gray-600 mb-8 font-medium">Bé đã vượt qua tất cả các mật mã rồi!</p>
+            <button onclick="location.reload()" class="w-full py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:brightness-110 active:scale-95 transition-all">
+                Chơi lại thôi!
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        const apiKey = ""; 
+
+        const shapes = {
+            square: { 
+                id: 'square', 
+                svg: `<rect width="80" height="80" rx="12" fill="url(#grad-blue)" />`,
+                gradient: `<linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60a5fa" /><stop offset="100%" style="stop-color:#2563eb" /></linearGradient>`
+            },
+            circle: { 
+                id: 'circle', 
+                svg: `<circle cx="40" cy="40" r="40" fill="url(#grad-yellow)" />`,
+                gradient: `<linearGradient id="grad-yellow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#fde047" /><stop offset="100%" style="stop-color:#ca8a04" /></linearGradient>`
+            },
+            triangle: { 
+                id: 'triangle', 
+                svg: `<path d="M40 0 L80 70 Q80 80 70 80 L10 80 Q0 80 0 70 Z" fill="url(#grad-red)" />`,
+                gradient: `<linearGradient id="grad-red" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f87171" /><stop offset="100%" style="stop-color:#b91d1d" /></linearGradient>`
+            }
+        };
+
+        const levels = [
+            {
+                pattern: ['square', 'circle', 'square', 'circle', 'square'],
+                answer: ['circle'],
+                options: ['square', 'circle', 'triangle'],
+                instruction: "Bé hãy chọn hình tiếp theo nhé"
+            },
+            {
+                pattern: ['triangle', 'square', 'square', 'triangle', 'square', 'square'],
+                answer: ['triangle', 'square', 'square'],
+                options: ['square', 'triangle', 'circle'],
+                instruction: "Bé hãy chọn hình tiếp theo nhé"
+            },
+            {
+                pattern: ['circle', 'circle', 'triangle', 'circle', 'circle', 'triangle'],
+                answer: ['circle', 'circle', 'triangle'],
+                options: ['circle', 'triangle', 'square'],
+                instruction: "Bé hãy chọn hình tiếp theo nhé"
+            },
+            {
+                pattern: ['triangle', 'triangle', 'square', 'triangle', 'triangle', 'square'],
+                answer: ['triangle', 'triangle', 'square'],
+                options: ['triangle', 'square', 'circle'],
+                instruction: "Bé hãy chọn hình tiếp theo nhé"
+            }
+        ];
+
+        let currentLevel = 1;
+        let dragData = null;
+        let userAnswers = [];
+
+        function createShapeSVG(shapeId, size = 80) {
+            const shape = shapes[shapeId];
+            if(!shape) return '';
+            return `
+                <svg width="${size}" height="${size}" viewBox="0 0 80 80" class="shape-3d pointer-events-none">
+                    <defs>${shape.gradient}</defs>
+                    ${shape.svg}
+                </svg>
+            `;
+        }
+
+        async function speak(text) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `Say in a cheerful, soft Southern Vietnamese female voice: ${text}` }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
+                        },
+                        model: "gemini-2.5-flash-preview-tts"
+                    })
+                });
+                const result = await response.json();
+                const audioData = result.candidates[0].content.parts[0].inlineData.data;
+                const audioBlob = pcmToWav(audioData, 24000);
+                const audio = new Audio(URL.createObjectURL(audioBlob));
+                audio.play();
+            } catch (err) { console.error("TTS Error:", err); }
+        }
+
+        function pcmToWav(base64, sampleRate) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+            const byteArray = new Uint8Array(byteNumbers);
+            const buffer = new ArrayBuffer(44 + byteArray.length);
+            const view = new DataView(buffer);
+            const writeString = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+            writeString(0, 'RIFF'); view.setUint32(4, 32 + byteArray.length, true);
+            writeString(8, 'WAVE'); writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+            writeString(36, 'data'); view.setUint32(40, byteArray.length, true);
+            const pcmView = new Uint8Array(buffer, 44); pcmView.set(byteArray);
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function playSound(type) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.connect(g); g.connect(ctx.destination);
+            if (type === 'success') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1046, ctx.currentTime + 0.1);
+                osc.frequency.exponentialRampToValueAtTime(1567, ctx.currentTime + 0.2);
+                g.gain.setValueAtTime(0.2, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            } else {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(50, ctx.currentTime + 0.3);
+                g.gain.setValueAtTime(0.1, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            }
+            osc.start(); osc.stop(ctx.currentTime + 0.4);
+        }
+
+        function initLevel(idx) {
+            const level = levels[idx];
+            userAnswers = Array(level.answer.length).fill(null);
+            
+            const patternRow = document.getElementById('pattern-row');
+            const optionsRow = document.getElementById('options-row');
+            const instruction = document.getElementById('instruction');
+            
+            patternRow.innerHTML = '';
+            optionsRow.innerHTML = '';
+            instruction.innerText = level.instruction;
+
+            const shapeSize = idx > 0 ? 60 : 85;
+
+            // Render Pattern
+            level.pattern.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'floating flex-shrink-0';
+                div.innerHTML = createShapeSVG(s, shapeSize);
+                patternRow.appendChild(div);
+            });
+
+            // Render Drop Zones
+            level.answer.forEach((_, i) => {
+                const zone = document.createElement('div');
+                const dim = idx > 0 ? 'w-16 h-16' : 'w-20 h-20';
+                zone.className = `drop-zone ${dim} rounded-2xl flex flex-shrink-0 items-center justify-center text-3xl text-gray-400 font-bold`;
+                zone.innerHTML = '?';
+                zone.dataset.index = i;
+                
+                // Event listeners for desktop drag and drop
+                zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('active'); };
+                zone.ondragleave = () => zone.classList.remove('active');
+                zone.ondrop = (e) => {
+                    e.preventDefault();
+                    handleDrop(null, zone);
+                };
+                
+                // Touch/Pointer support
+                zone.onpointerup = () => {
+                    if (dragData) handleDrop(null, zone);
+                };
+                
+                patternRow.appendChild(zone);
+            });
+
+            // Render Options
+            const displayOptions = (idx === 3) ? [...level.options, ...level.options] : level.options;
+            displayOptions.forEach((s, optIdx) => {
+                const div = document.createElement('div');
+                div.className = 'cursor-pointer hover:scale-110 active:scale-95 transition-transform p-1';
+                div.innerHTML = createShapeSVG(s, 90);
+                
+                // Multi-device support
+                div.onpointerdown = (e) => { 
+                    dragData = s; 
+                    div.style.opacity = '0.5';
+                    // For touch devices, ensure pointer capture
+                    if (e.pointerId) div.setPointerCapture(e.pointerId);
+                };
+                div.onpointerup = (e) => { 
+                    div.style.opacity = '1';
+                    if (e.pointerId) div.releasePointerCapture(e.pointerId);
+                };
+                
+                div.draggable = true;
+                div.ondragstart = (e) => { 
+                    dragData = s; 
+                    e.dataTransfer.setData('text/plain', s);
+                };
+
+                optionsRow.appendChild(div);
+            });
+
+            // Update Progress dots
+            for(let i=1; i<=4; i++) {
+                const dot = document.getElementById(`step-${i}`);
+                if (dot) dot.style.backgroundColor = (i <= idx + 1) ? '#3b82f6' : '#d1d5db';
+            }
+
+            // Màn 1: Bé hãy chọn hình tiếp theo nhé
+            if (idx === 0) speak("Bé hãy chọn hình tiếp theo nhé");
+        }
+
+        function handleDrop(e, zone) {
+            const level = levels[currentLevel - 1];
+            const zoneIdx = parseInt(zone.dataset.index);
+            const shapeSize = currentLevel > 1 ? 55 : 75;
+
+            zone.classList.remove('active');
+
+            if (dragData === level.answer[zoneIdx]) {
+                // ĐÚNG
+                zone.innerHTML = createShapeSVG(dragData, shapeSize);
+                zone.classList.remove('drop-zone');
+                zone.style.border = 'none';
+                zone.classList.add('bg-white', 'shadow-inner');
+                
+                playSound('success');
+                speak("Chính xác");
+                
+                document.body.classList.add('success-flash');
+                setTimeout(() => document.body.classList.remove('success-flash'), 500);
+                
+                userAnswers[zoneIdx] = dragData;
+                
+                // Kiểm tra hoàn thành level
+                if (userAnswers.every(a => a !== null)) {
+                    if (currentLevel < levels.length) {
+                        setTimeout(() => {
+                            currentLevel++;
+                            initLevel(currentLevel - 1);
+                        }, 1500);
+                    } else {
+                        setTimeout(showWin, 1000);
+                    }
+                }
+            } else {
+                // SAI
+                playSound('error');
+                zone.classList.add('bg-red-100');
+                setTimeout(() => zone.classList.remove('bg-red-100'), 500);
+                speak("Chưa chính xác rồi");
+            }
+            dragData = null;
+        }
+
+        function showWin() {
+            const modal = document.getElementById('win-modal');
+            const content = document.getElementById('modal-content');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => content.classList.add('scale-100'), 50);
+            speak("Hoan hô! Bé thật là tuyệt vời!");
+        }
+
+        window.onload = () => {
+            initLevel(0);
+            document.getElementById('speaker-btn').onclick = () => {
+                speak("Bé hãy chọn hình tiếp theo nhé");
+            };
+        };
+    </script>
+</body>
+</html>
